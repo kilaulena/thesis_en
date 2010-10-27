@@ -1,0 +1,16 @@
+\chapter{Task description}
+\label{chap:aufgabenstellung}
+
+In the introduction, the current (as of June 2010) changes in the circumstances and raised expectations from applications have been pointed out. More people are using ever growing systems on ever more mobile devices and are thus raising the bar for their usability and availability.
+
+At the same time, the development of technologies that help to satisfy these requirements is making progress. In the realms of database systems, the last decade has seen the introduction of a new \enquote{movement} called \textit{NoSQL} \cite{nosql:strozzi}. NoSQL is an umbrella term designating a group of non-relational database systems or \textit{key-value stores}. A common trait to these systems is that they usually do not, in contrast to relational databases, need a fixed table structure. Their strong point is their distributability, making them particularly suitable for scaling up. The advantages of traditional database systems, especially continuous consistency, are traded for better availability or partition tolerance (see section \ref{subsec:cap}).
+
+These new database systems have been developed for specific use cases. It is not the aim of this thesis to perform an exhaustive comparison of NoSQL databases. Rather, it will discuss the usability of a certain NoSQL-database system by means of a real example. Is it possible to develop functional software after a thorough analysis using the technology of choice?
+
+The document-oriented database CouchDB \cite{couch:homepage} was already shortly introduced in the introduction. In an application that was implemented using CouchDB, it is possible to completely omit any \textit{middleware}. \textit{Master-master-replication} is a core functionality, making CouchDB particularly suitable for distributed operation. CouchDB applications run directly in the web browser, minimising the amount of programs necessary for using the application. This also means that the system can be used in a very high number of devices. Why this very database system was chosen will be explained in detail in the chapters \ref{chap:analyse} and \ref{chap:couchdb}.
+
+As a study case for the use of CouchDB an \textit{outliner} was chosen. Such software allows hierarchic structuring and notation of thoughts or concepts. The model used here is the program OmniOutliner \cite{omnioutliner:website}, an offline desktop program for Mac OS X. The goal is to prototypically create an outliner with similar, but limited, functionality and to analyse in this way the usability of CouchDB.
+
+The application conceived here differs from its model on one point: it should also allow collaborative editing of documents distributed over networks, even when the user disconnects from the Internet between times. The application created for this thesis will run locally in the browser and will also be available when offline. Via the Internet, the data will be editable by several simultaneous users.
+
+This thesis will investigate if CouchDB is suitable to develop distributed applications. In order to verify this, a prototype of the distributed outliner will be designed and developed.

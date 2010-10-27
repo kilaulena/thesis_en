@@ -1,0 +1,37 @@
+\chapter{Introduction}
+
+
+\section{Motivation}
+\label{sec:motivation}
+
+
+\begin{quote}
+We're at the dawn of a new age on the web, or maybe on a horizon, or a precipice; the metaphor doesn't matter, the point is, things are changing. Specifically, as browsers become more and more powerful, as developers we're given new opportunities to rethink how we architect web applications. 
+\cite{web:architecture}
+\end{quote}
+
+The Internet is playing an ever more important role in our everyday lives. The share of people that frequently use the Internet in Germany is currently at 72 per cent and is still growing. Among 14 to 19-year-olds, only 3 per cent \citelit[p. 10]{internetverbreitung} never uses the Internet. Along with the rising number of Internet users, the use of web applications for co-operation, communication and data exchange becomes increasingly normal. This also means that web applications have to be able to cope with ever larger numbers of simultaneous users. The web browser is becoming an increasingly important application platform \citelit[p. 16]{webapps}. Hardly any piece of software went through such enormous evolution as the web browser \citelit{browsers}. This gave rise to new possibilities for web applications, since they raise the bar for the user-friendliness, usability and availability.
+
+A further trend is the growing spread of mobile devices \citelit[p. 61]{internetverbreitung}. In \citelit[p. 7]{mobileagents}, the author predicts that the number of devices able to access the Internet will grow rapidly, thanks to the growing number of services on it, and fast developments in computer technology. Mobile devices today include mostly laptops and mobile phones. Their connectivity, however, is often less reliable than is the case with stationary devices. Long disconnected periods are common. Other barriers include high latency and limited bandwidth \citelit{mobildataaccess}.
+
+So there is a high need for technology that can satisfy aforementioned co-operation and data exchange requirements. The technology should make it possible to implement systems that scale within a larger scope. At the same time they should vastly reduce the need for continuous connectivity. One solution for this kind of problem is data replication. \citelit{mobildataaccess} sketches this as follows:
+
+\begin{quote}
+Copies of data are placed at various hosts in the overall network, [...] often local to users. In the extreme, a data replica is stored on each mobile computer that desires to access that data, so all user data access is local.
+\end{quote}
+
+The difficulty with this is that it is hard to synchronise data regularly and to keep data consistent. Consistency has to be monitored by the system responsible for replication. The goals of such a system are high availability and control over one's own data. Such a solution can at the same time meet the high privacy standards that users expect from modern web applications \citelit{privacy:concerns, privacy:disclose}. In systems that perform replication, users can decide for themselves with whom they share their data. The usage of a correspondingly implemented system is at least temporarily independent from central servers. Possible failure of the network or its individual nodes is factored in beforehand.
+
+This thesis describes the design and realisation of software using the CouchDB database. CouchDB allows the implementation of applications that scale \enquote{up} as well as \enquote{down}: applications should support distribution over any number of nodes in order to warrant availability and performance. They should also be available on mobile devices and allow synchronisation of user data \citelit{scalingdown}.
+
+\section{Structure of the thesis}
+
+Initially, the central question of the thesis will be formulated (chapter \ref{chap:aufgabenstellung}). The goal of this thesis is to find a well-founded answer to this question. In order to do so, chapter \ref{chap:analyse} will provide a categorisation of the system to be developed and an analysis of the relevant solutions.
+
+Chapter \ref{chap:couchdb} is dedicated to the CouchDB database. The database is categorised theoretically in section \ref{sec:theoretisch-couchdb}. Its implementation details are explained in section \ref{sec:technisch-couchdb}. Chapter \ref{chap:grundlagen} presents further technologies that have influenced the application's implementation. Subsequently, the web technologies that were employed are listed and described (section \ref{sec:webtechnologien}), as well as cloud computing (section \ref{sec:cloud}) and other support tools (section \ref{sec:werkzeuge}).
+
+The requirements of the application are specified in chapter \ref{chap:systemanforderungen}. Chapter \ref{chap:systemarchitektur} sketches the structure of the application, weighing different design alternatives against each other. The technical details of the final system are drafted in chapter \ref{chap:systemdokumentation} and supplemented with source code excerpts in the appendix. The practical part of the thesis is concluded by a manual in chapter \ref{chap:anwendung}. An evaluation of the results will be included in the final chapter \ref{chap:fazit}.
+
+\section{Markup}
+
+In order to increase the readability of this thesis, some terms have been emphasised. Technical terminology and names of involved technologies will be printed in \textit{italics} when they are mentioned for the first time. They will not be emphasised a second time if they re-appear later in the text. The explanations for abbreviations can be found in the abbreviation table in appendix \ref{figure:abkuerzungen}. Terms from the source code will be highlighted using the {\fontfamily{pcr}\selectfont Courier} font. Source code excerpts are printed in \lstinline!typewriter!-style. Blocks of source code have a grey background and an outline. Block quotes are indented on the left and right sides. In-line quotes are put in quotes.

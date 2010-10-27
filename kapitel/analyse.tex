@@ -1,0 +1,160 @@
+\chapter{Analysis}
+\label{chap:analyse}
+
+In chapter \ref{chap:aufgabenstellung}, the requirements for a system were roughed in. This thesis will discuss the design and implementation of this application as well as the assessment of the results. In the next chapter, the formulation of the problems to be solved by the application and its scientific classification will be examined more closely. Then, different solutions will be analysed to find out how to implement such a system most easily. Alternative solutions will be discussed.
+
+\section{Requirements of an outliner}
+
+Before the chosen solution is separated from other possibilities, the properties and requirements of the application will be established more precisely.
+
+\subsection{Definition}
+
+An outliner is described by Wikipedia as a mixture of a free-form database and a text editor \cite{gliederungseditor}:
+
+\begin{quote}
+An outliner is a computer program that allows one to organize text into discrete sections that are related in a tree structure or hierarchy. Text may be collapsed into a node, or expanded and edited. \cite{outliner}
+\end{quote}
+
+Some outliners also allow formatting entries and embedding several media. There is a multitude of implementations of such programs.
+
+One of the most valued implementations \cite{omnioutliner:rating} is the commercial software OmniOutliner \cite{omnioutliner:website} (screenshot see fig. \ref{fig:omnioutliner-screenshot}). This program is developed by \enquote{Omni Group} for the Mac OS X operating system. Alongside conventional outliner properties, it also boasts some additional, special features. OmniOutliner will serve as a model in the development of the application, even though not all its features can be implemented in the prototype.
+
+
+\subsection{Usage examples}
+\label{subsec:einsatzmoegl}
+
+Much like with text editors, the usage examples of an outliner are manifold. In the next few paragraphs, we will present only a few of the possible usage scenarios. Some of those are taken from \cite{gliederungseditor}, others were provided by the author herself. Some design decisions in the development of the software were made based on these scenarios.
+
+The original goal of an outliner is defined by \cite{gliederungseditor} as the card-index box that is so popular amongst humanists:
+
+\begin{quote}
+Text of varying length (e.g. quotes) are saved after category in an indexed file and are thus available. [...] In this way, a sizable archive of important text extracts can quickly be built.
+\end{quote}
+
+A commonly quoted usage case of outliners is in writing literary, journalistic or scientific texts. Initially, the outlines of the story can be entered in chapters and scenes. Next, the user can add details to the branches of the tree structure. Later on, parts of the text can be moved by moving the nodes in the tree around. This is a lot harder to do with a simple text editor or word processor.
+
+Outliners can also be used to save a larger amount of short text excerpts. These may include tasks, ideas, minutes, logbooks or shopping lists.
+
+
+\section{Requirements of distributed systems}
+
+This section will start with a definition of distributed systems. It will be demonstrated that the application to be developed is indeed a distributed system. In the following sections, the choice for CouchDB for the implementation of such a system will be accounted for.
+
+An often-cited definition is found in \citelit[Chap. 1.1]{tanenbaum:vs}:
+
+\begin{quote}
+A distributed system is an accumulation of independent computers that appears as one coherent system to its users.
+\end{quote}
+
+This description may refer to any number of computers, however many. For instance, in \citelit[Chap. 1.2]{vs:coulouris} and in \citelit[p. 6]{vs:bengel}, the Internet and World Wide Web itself are also termed distributed systems. There are also wider definitions, in which not only the physically distributed hardware, but also logically distributed applications are referred to as a distributed system \citelit[p. 5]{vs:bengel}. After \citelit[Chap. 1.1]{vs:coulouris}, the fundamental characteristic of a distributed system is only to communicate through \textit{message passing}. Generally speaking:
+
+\begin{quote}
+A distributed system is a system which operates robustly over a wide network. \citelit[Chap. 2]{couchdb}
+\end{quote}
+
+Accordingly, a system can be called distributed if it can be separated into multiple, autonomous components, i.e. each has to be a complete system in its own. The individual subsystems can be very heterogenous with regard to operating systems and hardware. The connection type does not matter either. Moreover, users as well as programs that use the system should have the impression that they are dealing with one single system. The challenge in developing distributed systems is to define how the system's components will co-operate in a manner that is transparent to the user. The system's inner structure should not be visible to the user. Furthermore, it should be possible to work consistently and uniformly with the system, irrespective of time and location of access \citelit[Chap. 1.1]{tanenbaum:vs}.
+
+According to \citelit[Chap. 1.1]{vs:coulouris} and \citelit[Chap. 1.1]{tanenbaum:vs}, the following obstacles should be considered when designing distributed systems:
+
+\begin{description}
+  \item[Concurrency:] Components of a system are executing program code concurrently when they are accessing common resources, reading from and writing to them at the same time. A distributed system therefore needs to use algorithms that are specially designed for dealing with concurrent processes.
+  \item[No global clock:] The clocks of the subsystems cannot be kept synchronised. Therefore it is not possible to solve editing conflicts with timestamps. In its stead, MVCC (Multi Version Concurrency Control) often uses \textit{Vector clocks} \citelit{timeclocks} or other unambiguous identification mechanisms such as \textit{UUIDs (Universally Unique Identifier)} \cite{uuids}.
+  \item[Subsystem failure:] The failure of individual components or network interruption should not hamper the operation of the entire system. The subsystems need to function independently, even when the connection between them is interrupted temporarily or for a longer period, or if one of them breaks down.
+\end{description}
+
+In chapter \ref{sec:theoretisch-couchdb}, this problem is examined in detail.
+
+\section{Requirements of groupware}
+
+According to \citelit{groupware:definition}, groupware systems are ...
+
+\begin{quote}
+... computer-based systems that support two or more users engaged
+in a common task, and that provide an interface to a shared environment. These systems frequently require fine-granularity sharing of data and fast response times.
+\end{quote}
+
+As with any other software project, distributed systems should be designed with not only the technical eventualities in mind. The very real demands of the target audience have to be taken into account as well. For instance, the specific questions and problems that users have with groupware should be considered, and what that means for the design, development and schooling.
+
+CouchDB, the database used in this thesis, is often compared to Lotus Notes. CouchDB's creator, Damien Katz, has been a developer on the Notes team and has admitted having been heavily influenced by it in developing CouchDB \cite{lotusnotes:interview}. Notes resembles CouchDB to the extent that a database in Notes consists of a collection of semi-structured documents, organised by Views \citelit[Chap. 2]{lotus:kawell}. According to \citelit{lotus:kawell}, Lotus Notes is a communication system that allows groups to edit and share information such as texts and notes:`'
+
+\begin{quote}
+The system supports groups of people working on shared sets of documents and is intended for use in a personal computer network environment in which the database servers are \enquote{rarely connected}. \citelit[Chap. 1]{lotus:kawell}
+\end{quote}
+
+Lotus Notes and the application being developed here are analogous in that the latter will perform at least some of Notes' tasks. Additionally, the synchronisation of documents is also achieved by database replication. Scientific insights in the usage of Lotus Notes are therefore of interest in designing the application.
+
+Several studies have examined the success of adopting Lotus Notes for collaboration between distributed groups.
+
+\citelit{lotus:collaboration} analyses the influence of Notes on the collaboration within a major insurance company. Even though its employees were very happy with the product, there was no perceptible improvement in their collaboration efforts. The study concludes that a system has to accurately fit the target audience and that basic schooling in the new technology plays a central role.
+
+\citelit{lotus:organisational}'s author states that users that have never used groupware before usually approach it as they would a familiar (single-user) program:
+
+\begin{quote}
+[The] findings suggest that when people neither understand nor appreciate the co-operative nature of groupware, it will be interpreted as an instance of some more familiar technology and used accordingly. This can result in counter-productive and uncooperative practice and low levels of use.  \citelit[p. 4]{lotus:organisational}
+\end{quote}
+
+These findings are endorsed by another research:
+
+\begin{quote}
+The findings suggest that where people's mental models do not understand or appreciate the collaborative nature of groupware, such technologies will be interpreted and used as if they were more familiar technologies, such as personal, stand-alone software (e.g., a spreadsheet or word processing program). \citelit[p. 1]{lotus:learningfrom}
+\end{quote}
+
+If the software's structure differs from the group's company culture, it is unlikely to be used in a meaningful way. Groupware should be adapted to the group's existing processes if it is to improve the workflow. If the tasks of the software include dealing with conflicts, support for the team's own conflict solving strategies is one of the keys to success \citelit{lotus:montoya}.
+
+It still remains to be determined that software whose users are not still familiar with its central characteristics has -on one hand- to be adapted to that very audience. This is especially difficult in the concept phase, because the application prototype is developed for no clearly defined user base. The task of limiting the target group remains for a later development phase. On the other hand, the training and documentation for the users have to receive extra care. The work done here should help people get used to collaborating more closely with the aid of software.
+
+
+\section{Various approaches}
+
+In this section various approaches for the conceptual formulation are discussed. Advantages and disadvantages of existing solutions will be examined and a preferred alternative will be lifted out.
+
+The problem that needs solving is: How can documents be edited by several users at the same time, even when some of them may disconnect from the Internet for a longer period of time? How can the system handle the occurring editing conflicts automatically or present them in a meaningful way for the user to be solved?
+
+\subsection{Manual data exchange}
+
+The most trivial operation is manual synchronisation. Documents are exchanged directly between individual users, e.g. per email or FTP, and edited concurrently. Users have to merge different versions by hand and the results have to be exchanged again. Details are easily lost in the process.
+
+Some web services offer network file systems that allow automatic synchronisation of data. For example, Dropbox \cite{dropbox:website} allows to synchronise whole folders and files between different computers. If a conflict occurs in the process both versions are saved as separate files. It is the user's task to resolve any conflicts.
+
+\subsection{Real-time text editors}
+\label{subsec:workflow}
+
+Another approach gaining in popularity is the use of centralised collaboration systems on the Internet. Users can usually use such web applications to work on documents collectively and in real-time. Examples of such platforms are Etherpad \cite{etherpad}, Google Docs \cite{google:docs}, and more recently, Google Wave \cite{google:wave}. The latter foregrounds the communicative aspect but also allows users to simultaneously edit longer texts. Google Docs on the other hand shares more characteristics of word processing software.
+
+Desktop programs such as the text editor SubEthaEdit \cite{subethaedit:website} show their advantages only with an active network connection. SubEthaEdit allows users to find each other locally or over the Internet using the Bonjour protocol. They can then invite each other to work together on a document.
+
+Both approaches presented in the last paragraphs have one thing in common. Either they can only be used with a working Internet connection, or conflict handling is only supported if all clients are connected to the server simultaneously. Otherwise, conflicting versions have to be merged manually.
+
+Some of the programs presented here allow live tracking of other authors' keystrokes. This is not valued by everyone. In \cite{google:wavetyping} working with Google Wave is described as \enquote{[like] talking to an overcurious mind reader}. The awareness that others are watching while you think is distracting and may interfere with the work. In cases where users work longer on the same document, they may develop a feeling of ownership over the text. Under such circumstances, watching live how other people make modifications may be quite unpalatable \citelit{groupware}.
+
+Since the application to be developed should also allow working with longer texts, we can set the live-typing feature aside.
+
+\subsection{Versioning system}
+
+In the realms of software development, the use of versioning systems such as Subversion \cite{subversion:website} or Git \cite{git:website} has been widely adopted. Such systems collect changes to documents including author and time stamp and saves them in individual \textit{commits}. These revisions can be restored at a later stage. Moreover, several changes by different users to a single file can be merged automatically by the system.
+
+Such a system is very convenient for plain-text files. That is why such programs are mainly used in software development. Most implementations do not have an interface that is accessible for the less technically inclined. The implementation of an application with a Git back-end would be worth considering.
+
+\subsection{Databases}
+
+A database approach, especially the free-form data storage presented in chapter \ref{chap:aufgabenstellung}, jumps to mind. Some databases or key-value stores support master-master replication and save data on the hard disk. These generally come into question for the solution of the task at hand.
+
+The document-oriented database CouchDB differs from the competition in that it comes with its own web server. This does not only output the available data, but also allows running JavaScript files stored in the database. This allows the whole application to run inside the database. The resulting program is therefore automatically available on any computer running CouchDB, provided there is a browser installed. None of the other database systems examined provided such functionality.
+
+The open, relational databases PostgreSQL \cite{postgres:website} and MySQL \cite{mysql:website} can be configured for master-master replication between two masters. PostgreSQL boasts a multitude of plug-ins \cite{postgres:replication} with which it is possible -amongst others- to set up a master-master configuration. For this same purpose, MySQL uses the MySQL cluster technique \cite{mysql:cluster}, allowing master-master replication on a shared-nothing architecture \citelit[Chap. 1]{sharednothing}. \cite{mysql:multimaster} describes how to implement replication for several nodes.
+
+The key-value store Riak \cite{riak:website} also has an web interface and saves its files distributedly. In this case, however, there is no peer-to-peer replication like in CouchDB, but rather a sort of auto-balancing to increase availability and performance in larger systems. MongoDB \cite{mongodb:website} has limited support for master-master replication and allows \textit{eventual consistency} (cf. section \ref{subsec:cap}), which would be useful in a distributed system. But it lacks one of CouchDB's most interesting features: to run application code directly from within the browser. Both technologies are therefore less suitable than CouchDB for the purpose of implementing the planned application.
+
+Replication and clustering in the systems discussed above are more or less similar to the functionality offered by CouchDB Lounge. This is discussed in section \ref{subsec:lounge}. Automatic conflict highlighting are not supported by these systems either. In order to implement replication within the application logic, none of these solutions prove satisfactory.
+
+In direct comparison, CouchDB emerges as the best solution for the issues described above, thanks to its ability to perform master-master replication, because it includes conflict resolving and a convenient consistency model, and because applications can be delivered straight from the database. In the next section, the solution chosen here will be examined more closely.
+
+\section{Description of the chosen solution}
+
+The application is developed as a local, network-ready program. The data are saved into a CouchDB database; the application logic is executed by the browser as client-side JavaScript code. The functional range of the outliner will allow at least creating and deleting outlines. Text can be entered line after line and can be indented our outdented.
+
+The exchange of data as well as of the application is performed by master-master replication embedded in CouchDB. This means that the data can be changed by all computers that have a copy. A server runs another CouchDB instance. Replication to this server is automatically done when a user adds something to a document. Further users can download the entire application in the CouchDB installation onto their computers. If an Internet connection exists, updates to the data are automatically replicated to the server and from there distributed to other users that happen to be on-line. The application notifies the user as soon as changes are on hand. The user can then view these changes by reloading the page.
+
+The main task lies in dealing with editing conflicts that have been caused by simultaneous editing of data. New or changed lines have to be inserted or updated, especially when a user replicates after having been offline for a longer period. CouchDB in itself can highlight occurring conflicts. Whether conflicts are to be shown for review or to be solved automatically is a decision that has to be made in the concept phase. Since the time is limited, not all possibly occurring conflicts will be taken into consideration. Rather, some types of conflicts will be examined.
+
+Moreover, deployment and scaling options with the CouchDB Lounge clustering framework and Amazon Elastic Compute Cloud (Amazon EC2) will be discussed. The application will be deployed as a prototype; possibilities for implementation of a highly available server will be described.

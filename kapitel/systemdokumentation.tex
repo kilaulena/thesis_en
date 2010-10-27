@@ -1,0 +1,270 @@
+\chapter{System documentation}
+\label{chap:systemdokumentation}
+
+
+This chapter will describe the final result of the implementation of the system that was presented in the previous chapter. To start with, the application's code structure will be commented on. An overview of the entire system is presented with the aid of a class diagram and an introduction to the routing scheme and data structures. Furthermore, the modules that were developed for the realisation of the user interface, replication, conflict detection and conflict handling are presented. Afterwards the implementation of the test suite will be discussed.
+
+Section \ref{sec:cloud} already introduced the cloud computing used for the deployment; this chapter's conclusion presents an illustration of how the application was deployed using cloud computing and Amazon Web Services. Finally, the clustering framework CouchDB Lounge was introduced which was used to optimise the deployment in terms of scalability.
+
+It is not possible to comment on all the source code in this thesis. Instead, the different layers of the system will be presented. Only technically very complicated or significant algorithms or functions will be investigated. Short source code snippets are contained within the text, longer ones are kept in the appendix.
+
+
+\section{Structure of the project}
+
+In order to convey an overview over the code's structure, this section will explain the contents of the folders in this project. The individual classes and functions will be discussed more closely in the following sections. Their meaning was already shortly explained in the sections \ref{subsec:designdokumente} and \ref{subsec:couchapp}.
+
+
+\begin{description}
+  \item[\_attachments:] Contains those parts of the applications that can be executed directly in the browser, as well as the start page ({\fontfamily{pcr}\selectfont index.html}).
+    \begin{description}
+      \item[app:] Contains business classes and the file {\fontfamily{pcr}\selectfont application.js} in which the routing framework Sammy.js is initialised. All resources from the \textit{helpers} and business classes are loaded here. The initialisation function {\fontfamily{pcr}\selectfont init} that is called here binds certain behaviour to window, mouse and keyboard events. The replication is also started from here.
+        \begin{description}
+          \item[\_controllers:] The controller's task is to define the routes introduced in \ref{subsec:routes} and their behaviour.
+          \item[\_helpers:] Helpers contain functions that are no methods of business classes in the narrow sense. These functions are mainly in charge of certain parts of the interface's behaviour. For example, the keyboard events used in the {\fontfamily{pcr}\selectfont init} functions are defined here. Line traversal functions are also stored here.
+          \item[\_lib:] Contains self-made libraries that extend JavaScript's functionality. In {\fontfamily{pcr}\selectfont resources.js} functions are abstracted by which the controllers perform read and write operations on the database.
+          \item[\_models:] Contains the definition of the {\fontfamily{pcr}\selectfont Outline}, {\fontfamily{pcr}\selectfont Note} and {\fontfamily{pcr}\selectfont NoteCollection} \enquote{classes}. They are \textit{models}in the sense of \textit{object/relational mapping}. They are described in detail in section \ref{sec:datenstruktur}. The functions for conflict detection, presentation and resolution are also defined here.
+          \item[\_templates:] Contains HTML templates for the template engine Mustache.js. These partials are put together to construct the site.
+          \item[\_views:] No CouchDB views are meant, but rather the representation of the {\fontfamily{pcr}\selectfont Outline} and {\fontfamily{pcr}\selectfont Note} models for the application's business logic and for rendering. E.g. an {\fontfamily{pcr}\selectfont OutlineView} contains an {\fontfamily{pcr}\selectfont Outline} object and prepares its data for the Mustache templates. The controllers never directly access the models, they only access the view representations. This is exemplified in the class diagram in fig. \ref{figure:fachklassen}.
+        \end{description}
+        
+      \item[config:] The application's URLs for the replication service as well as the database name can be entered into the configuration file {\fontfamily{pcr}\selectfont config.js}. The subdirectory \textbf{features} also contains configuration files for the test environment.
+      \item[images:] Small graphics that are needed for the layout can be found here.
+      \item[spec:] Contains the unit tests and the unit test framework. They are described in section \ref{subsec:unittests}.
+      \item[style:] Contains style sheets that are self made or inherited from the Blueprint framework.
+    \end{description}
+  
+  \item[features:] This directory contains integration tests. They are described in section \ref{subsec:integrationtests}.
+  \item[filters:] Contains filter functions with which the database can be monitored for changes and conflict status.
+  \item[Rakefile:] Macros with which the application may be put into certain conflicting situations (section \ref{subsec:hilfestellung}) can be found here.
+  \item[README:] A summary of the installation manual (section \ref{sec:installation}) and the user's guide (section \ref{sec:bedienung}).
+  \item[vendor:] The included libraries are saved in this directory. The individual JavaScript files have to reside in a {\fontfamily{pcr}\selectfont \_attachments} subdirectory so that CouchDB is able to execute them.
+  \item[views:] Contains the CouchDB views with which readily formatted data can be requested. The application needs map functions from a total of three views.
+\end{description}
+
+The figure in section \ref{subsec:fachklassendiagramm} shows a business class diagram that gives an overview over the core classes.
+
+
+\section{Routing}
+\label{subsec:routes}
+
+This section will describe the application's URL scheme. In doing so, also the URL schemes of CouchApps and applications that use the routing framework Sammy.js will become clear. These technologies were presented in section \ref{subsec:couchapp} and \ref{subsec:sammy}.
+
+The start page can be found under the URL \url{http://localhost:5984/doingnotes/_design/doingnotes/index.html#/}. After the server and the port through which the application can be accessed the database name is indicated. The prefix 
+{\fontfamily{pcr}\selectfont \_design/} marks the beginning of a design document resp. the name of an application that is also called {\fontfamily{pcr}\selectfont doingnotes}. Since the {\fontfamily{pcr}\selectfont index.html} file is stored directly in the design document's {\fontfamily{pcr}\selectfont \_attachments} folder, it can be accessed from within the design document. The slash after the HTML anchor forwards to a Sammy route with the path {\fontfamily{pcr}\selectfont\#/}.
+
+Further routes are defined in the controllers; they will be explained here. The route with the path {\fontfamily{pcr}\selectfont\#/outlines} initialises a new {\fontfamily{pcr}\selectfont OutlinesView} that renders a list of all outlines. When {\fontfamily{pcr}\selectfont\#/outlines/new} is requested, it will display a form with which a new {\fontfamily{pcr}\selectfont Outline} can be created. The route {\fontfamily{pcr}\selectfont\#/outlines/edit/:id} shows a form with which the outline's title can be changed. {\fontfamily{pcr}\selectfont\#/outlines/:id} shows an outline; this is where the outliner is. Further routes have {\fontfamily{pcr}\selectfont PUT}, {\fontfamily{pcr}\selectfont POST} or {\fontfamily{pcr}\selectfont DELETE} methods and are as such transparent to the user.
+
+The author created a plug-in in which the basic database operations \textit{create}, \textit{read}, \textit{update} and \textit{delete} are abstracted. This way, recurring tasks do not have to be re-implemented in every route, but can be partially re-used for {\fontfamily{pcr}\selectfont Notes} and for {\fontfamily{pcr}\selectfont Outlines}. In listing \ref{code:resources} an extract from the plug-in can be found in which, amongst others, the methods {\fontfamily{pcr}\selectfont new\_object} and {\fontfamily{pcr}\selectfont load\_object\_view} are defined. {\fontfamily{pcr}\selectfont new\_object} receives the object type (e.g. {\fontfamily{pcr}\selectfont Outline}) and a callback-function. The latter is executed after the template for the corresponding object was loaded. {\fontfamily{pcr}\selectfont load\_object\_view} requires the object's ID as a parameter. The document with this ID is requested from the database and a view object is created. This view object can be used to render a template, as shown in the following example, which is taken from the route {\fontfamily{pcr}\selectfont\#/outlines/edit/:id}:
+
+\lstset{language=javascript}
+\medskip 
+\begin{lstlisting}[label=code:resources-apply, caption=Rendering of the outline editing template]
+load_object_view('Outline', '123', function(outline_view){
+  context.partial('app/templates/outlines/edit.mustache', outline_view, function(outline_view){
+    context.app.swap(outline_view);
+  });
+});
+\end{lstlisting}
+
+
+
+
+\section{Data structures}
+\label{sec:datenstruktur}
+
+As already explained in section \ref{subsec:fachklassendiagramm}, business classes are JavaScript functions that save attributes as local variables that correspond to the database fields. Methods are implemented by extending the function's prototype with the appropriate functionality. The following part will explain the application's data structure by looking at the structure of the CouchDB documents.
+
+
+\subsection{Outline}
+
+
+
+An {\fontfamily{pcr}\selectfont Outline} represents a file that can be edited in the outliner. Apart from {\fontfamily{pcr}\selectfont\_id} and {\fontfamily{pcr}\selectfont\_rev}, it also contains the data type {\fontfamily{pcr}\selectfont Outline} and the title ({\fontfamily{pcr}\selectfont title}). Timestamps mark the document's creation ({\fontfamily{pcr}\selectfont created\_at}) and the latest change to it ({\fontfamily{pcr}\selectfont updated\_at}). The latter is created only when the document's title is changed. The timestamps are generated on creation of the object using the command \lstinline!new Date().toJSON()!. They are used to chronologically order the outlines in the outline overview.
+
+\medskip 
+\begin{lstlisting}[label=code:outline-example, caption=An Outline document]
+{  "_id": "ce63ec5aaf501c567d200d89f200088a",
+   "_rev": "2-00899e40fef865bb3fa294cd72860b8f",
+   "created_at": "2010/07/04 12:12:52 +0000",
+   "updated_at": "2010/07/04 12:28:39 +0000",
+   "kind": "Outline",
+   "title": "My Shopping List" }
+\end{lstlisting}
+
+
+\subsection{Note}
+
+A {\fontfamily{pcr}\selectfont Note} represents a line in the outline. Similarly to the outline it contains the fields {\fontfamily{pcr}\selectfont\_id}, {\fontfamily{pcr}\selectfont\_rev}, the data type {\fontfamily{pcr}\selectfont Note}, {\fontfamily{pcr}\selectfont created\_at} and {\fontfamily{pcr}\selectfont updated\_at}. The timestamps are used for the order of the lines inside an outline when the order has to be determined by the system after replicating (see section \ref{subsec:appendconflict-implementierung}). 
+
+The contents of the lines are saved in the {\fontfamily{pcr}\selectfont text} field. {\fontfamily{pcr}\selectfont source} is used for the notification after replicating (see section \ref{subsec:repl-impl}). With the aid of the {\fontfamily{pcr}\selectfont outline\_id} field, it is possible to determine to which outline a line belongs. The last three fields are optional: {\fontfamily{pcr}\selectfont next\_id} and {\fontfamily{pcr}\selectfont parent\_id} are used to render the tree structure inside an outline. This is examined more closely in section \ref{subsec:baum-rendern}. {\fontfamily{pcr}\selectfont first\_note} is a Boolean and as such the only field whose data type is not a string. It marks the first line in a document so it can be found more easily when traversing.
+
+\medskip 
+\begin{lstlisting}[label=code:note-example, caption=A Note document]
+{
+   "_id": "ce63ec5aaf501c567d200d89f2001b08",
+   "_rev": "5-86d6c6ce0ad7b6b8454cbb91590e315c",
+   "created_at": "2010/07/21 23:55:35 +0000",
+   "updated_at": "2010/07/21 23:56:08 +0000",
+   "kind": "Note",
+   "text": "This is the text within one line",
+   "source": "eb8abd1c45f20c0989ed79381cb4907d",
+   "outline_id": "ce63ec5aaf501c567d200d89f200088a",
+   "next_id": "ce63ec5aaf501c567d200d89f2002a87",
+   "parent_id": "ce63ec5aaf501c567d200d89f20015ab",
+   "first_note": true
+}
+\end{lstlisting}
+
+
+
+
+
+\section{User interface}
+
+This section describes the implementation of the user interface. Successively, it will discuss the implementation of the outliner, the operations save, insert and indent, their effects on the DOM and the database, and the rendering of lines after an outline is re-loaded.
+
+
+\subsection{Implementation of the outliner}
+
+The outliner is displayed in the DOM as a {\fontfamily{pcr}\selectfont <div>} element that contains an unsorted list (see listing \ref{code:outline-partial}). The list's {\fontfamily{pcr}\selectfont <li>} elements are the outline's lines. If a line has child nodes, i.e. if there are indented lines below it, an additional {\fontfamily{pcr}\selectfont <ul>} element is inserted in the first line's {\fontfamily{pcr}\selectfont <li>}, which in turn contains further {\fontfamily{pcr}\selectfont <li>} elements. The result of such an indentation can be found in listing \ref{code:outline-indent}.
+
+\lstset{language=html}
+\medskip 
+\begin{lstlisting}[label=code:outline-partial, caption=Template for the outliner in Mustache syntax]
+<div id="writeboard">
+  <ul id="notes">
+    {{#notes}}
+      <li class="edit-note" id="edit_note_{{_id}}">
+        <form class="edit-note" action="#/notes/{{_id}}" method="put">
+          <span class="space">&nbsp;</span>
+          <a class="image">&nbsp;</a>
+          <textarea class="expanding" id="edit_text_{{_id}}" name="text">{{text}}</textarea>
+          <input type="submit" value="Save" style="display:none;"/>
+        </form>
+      </li>
+    {{/notes}}
+  </ul>
+</div>
+\end{lstlisting}
+
+
+\subsection{DOM modification}
+
+The initialisation function assigns certain behaviour to the text areas that represent the outliner's lines. Certain window, mouse or keyboard events will trigger this behaviour. Saving, inserting and indenting lines can be done this way.
+
+A line should always be saved when it loses mouse focus, whether this is caused by a keystroke, the mouse or the closing of the window. The line should not be saved if its contents did not change as compared to the text stored in the database. This is realised with the aid of a custom data attribute, as described in section \ref{subsec:html5}. When the user navigates into a line, the method {\fontfamily{pcr}\selectfont setDataText} is invoked for the {\fontfamily{pcr}\selectfont NoteElement}, i.e. a line's representation in the DOM. This temporarily saves the current content of the line, so that it can be compared to the text when the element loses focus again. If both values are identical, the saving process can be skipped.
+
+If a line has the focus and the enter key is pressed, the {\fontfamily{pcr}\selectfont insertNewNode} method generates a new Note object. The callback function fills the values into the partial for the new line and inserts it into the DOM using a jQuery method. Moreover, several pointers are adjusted, as explained earlier in section \ref{subsec:baumumsetzung}: The {\fontfamily{pcr}\selectfont next\_id} of the line to which the new line was attached and resp. also the {\fontfamily{pcr}\selectfont parent\_id}s of any succeeding lines have to correspond to the modifications in the DOM.
+
+A similar thing happens when lines are indented or outdented: here, too, the pointers of preceding and succeeding lines and those of any parent node and its successors have to be adjusted. In the worst case, the indenting of a line may lead to up to two further write operations. In the DOM, the indenting is realised by wrapping the line's {\fontfamily{pcr}\selectfont <li>} in a {\fontfamily{pcr}\selectfont <ul>}, and then inserting it into its new parent node.
+
+\subsection{Rendering the tree structure}
+\label{subsec:baum-rendern}
+
+The previous section sketched what happens to the DOM and the database when the user interacts with the outliner. However, if an outline is opened or refreshed, the lines have to be rendered all at once. All of the outline's lines are retrieved at once from the database as described in section \ref{subsec:viewabfrage}. In the resulting array of lines, the first line is determined; for this it is marked with a special attribute. Starting here a recursive function traverses the tree. \textit{Traversing} means \enquote{the examination of the tree's nodes in a certain order} \citelit[Chap. 2.3]{knuth}. All nodes are systematically examined so that each node is visited exactly once. After traversing a linear copy of the nodes is available.
+
+The function {\fontfamily{pcr}\selectfont renderNotes} receives the array that contains all of the outline's lines and a counter. The counter's initial value corresponds to the length of the array and is decremented by one with every pass. Additionally, the line that has been examined is deleted from the array. The function then verifies if the current line contains a child node or a next pointer. If so, the line is inserted into the DOM and {\fontfamily{pcr}\selectfont renderNotes} is called again. If a line is found that contains neither child node nor next pointer, the function knows that this is the final line and terminates. The function is documented in listing \ref{code:rendernotes}.
+
+Lines may be collapsed or expanded in a rendered tree. Collapsing a line's child nodes is done by simply hiding them. A triangle bullet at the beginning of the line is turned 90 degrees to indicate that some lines are collapsed. The database stores no information about collapsed lines.
+
+
+
+\section{Replication}
+\label{subsec:repl-impl}
+
+The functions that control the replication are contained within the {\fontfamily{pcr}\selectfont ReplicationHelpers} plug-in. They will be presented in this section.
+
+\subsection{Starting replication}
+
+The functions {\fontfamily{pcr}\selectfont replicateUp} and {\fontfamily{pcr}\selectfont replicateDown} can start continuous replication to respectively from the server. Both functions are constructed in a similar way, only source and target are swapped around:
+
+\lstset{language=javascript}
+\medskip 
+\begin{lstlisting}[caption=The {\fontfamily{pcr}\selectfont replicateUp} function]
+replicateUp: function(){
+  $.post(config.HOST + '/_replicate', 
+    '{"source":"' + config.DB + '", "target":"' + config.SERVER + '/' + config.DB + '", "continuous":true}',
+    function(){
+      Sammy.log('replicating to ', config.SERVER)
+    },"json");
+}
+\end{lstlisting}
+
+Both functions are called in the initialisation function in order to restart the replication every time the page is manually refreshed. If replication is already running, the command is simply ignored. This way it is possible to resume replication after reconnecting to the Internet. The URLs and ports of client and server are configured in the {\fontfamily{pcr}\selectfont config.js} file.
+
+\subsection{Change notification}
+\label{subsec:nochanges}
+
+The system requirements stipulate that the user be notified of changes brought about by replication without interrupting the user's flow of work. The page in which the outliner is embedded contains an element with the replication status message. The element remains hidden until there are changes. Clicking the link in the message reloads the page with the outline's actual version.
+
+
+\lstset{language=html}
+\medskip 
+\begin{lstlisting}[caption=Change notification]
+<h3 style="display:none;" id="change-warning">Replication has brought updates about. <a href="javascript: window.location.reload();">View them.</a></h3>
+\end{lstlisting}
+
+In order to verify whether there are any changes, the {\fontfamily{pcr}\selectfont source} field is reset every time a line is saved. It contains a hash of the value returned by {\fontfamily{pcr}\selectfont window.location.host}. This string allows unambiguous identification of the URL and port of the system where the line was changed. Hashing prevents personal data from being stored in the database.
+
+If an outline is shown, the function {\fontfamily{pcr}\selectfont checkForUpdates} is invoked for the outline. The changes feed is retrieved and all lines with a foreign {\fontfamily{pcr}\selectfont source} are filtered out by the filter in listing \ref{code:changesfilter}. For example, if the hash of the user's own host name equals \enquote{848c7}, this is done using the following URL: \url{http://localhost:5984/doingnotes/\_changes?filter=doingnotes/changed&source=848c7}.
+
+\lstset{language=javascript}
+\medskip 
+\begin{lstlisting}[label=code:changesfilter, caption={\fontfamily{pcr}\selectfont changed} filter for the changes feed]
+function(doc, req) {
+  if(doc.kind == 'Note' && doc.source != req.query.source) {
+    return true;
+  }
+  return false;
+}
+\end{lstlisting}
+
+The purpose of this request is to retrieve the database sequence number at the time of the latest foreign change, because changes only count as new after this point in time (see section \ref{subsec:change-notif}). The sequence number is saved in the variable {\fontfamily{pcr}\selectfont since}. Another XMLHttpRequest is then sent to monitor the database for changes after this point in time. It is also necessary to supply the {\fontfamily{pcr}\selectfont heartbeat} parameter, which sets the interval in milliseconds for CouchDB to send line breaks. This prevents the browser from mistakenly thinking that the connection timed out. The {\fontfamily{pcr}\selectfont feed=continuous} parameter allows the HTTP connection to be kept open so that, analogous to continuous replication, changes are sent continuously.
+
+If the sequence number is \enquote{142}, the request is sent to the following address: \url{http://localhost:5984/doingnotes/\_changes?filter=doingnotes/changed&source=848c7&feed=continuous\ &heartbeat=5000&since=142}. As soon as the returned ResponseText contains a document revision with a {\fontfamily{pcr}\selectfont changes} attribute, the document is opened and the notification introduced earlier is displayed. The function in charge for this functionality is documented in listing \ref{code:changesfeed}.
+
+Against the use of changes feeds in {\fontfamily{pcr}\selectfont continuous} mode can be said that it is currently only reliably supported by the browser Firefox. All other browsers ignore this option or react with erroneous output. However, since this is bound to change in future releases of other browsers, this limitation could be put up with.
+
+
+
+
+\section{Conflict detection}
+\label{subsec:konflikterkennung}
+
+The database should be monitored not only for changes but also for conflicts. Again, the user should be notified immediately so conflicts may be resolved as soon as possible.
+
+The {\fontfamily{pcr}\selectfont ConflictDetector} module - as well as the {\fontfamily{pcr}\selectfont ConflictResolver} presented in the next section - is implemented as a singleton. The {\fontfamily{pcr}\selectfont checkForNewConflicts} method uses - as described in the previous section - the changes feed in continuous mode in order to scan for changes. The filter function is used here to filter for conflicting lines. If a line is found with a {\fontfamily{pcr}\selectfont \_conflicts} array and its {\fontfamily{pcr}\selectfont outline\_id} corresponds to the outline currently being displayed, the first conflicting version of the line is loaded. The conflict type is identified and both competing revisions are passed on to the {\fontfamily{pcr}\selectfont ConflictResolver} or the {\fontfamily{pcr}\selectfont ConflictPresenter} for further handling.
+
+If conflicts are not solved immediately, they should be shown again immediately after re-opening the outline. For this purpose, the {\fontfamily{pcr}\selectfont ConflictDetector} temporarily stores these conflicts. When the outline is opened, the {\fontfamily{pcr}\selectfont checkForNewConflicts} method is invoked, which verifies if the stored conflicts belong to the currently open outline and passes them on to the {\fontfamily{pcr}\selectfont ConflictPresenter}. A hurdle that needed crossing was that changes in a document's {\fontfamily{pcr}\selectfont \_conflicts} array were not identified as a change for CouchDB's changes feed. In order to solve this problem, a patch for the changes feed was written. This patch \cite{jira:changesfeed} is documented in section \ref{subsec:changes-patch} and in \cite{github:changesfeed}.
+
+
+\section{Conflict handling}
+
+In the application's prototype two different conflict types were dealt with: append conflicts and write conflicts. These have been defined in section \ref{sec:konfliktbehandlung}. This section will discuss how these conflict types and their hybrid form are processed and resolved.
+
+\subsection{Append conflicts}
+\label{subsec:appendconflict-implementierung}
+
+The {\fontfamily{pcr}\selectfont ConflictDetector} checks a conflicting document's competing revisions to determine the kind of change that was made. If the revisions differ in {\fontfamily{pcr}\selectfont next\_id}, an append-conflict is at hand in the following line. This conflict can be resolved automatically by the application. Both revisions are passed on to the {\fontfamily{pcr}\selectfont ConflictResolver}. The {\fontfamily{pcr}\selectfont solve\_conflict\_by\_sorting} function loads the lines that follow the two conflicting revisions. These are then sorted chronologically and inserted into the tree structure. As a result of this operation they are positioned one below the other. Similarly, the pointers in the surrounding lines are adjusted to correctly reflect the new tree.
+
+In the user interface, the lines are accordingly inserted in the right order into the DOM. A message that reads \enquote{\textit{Replication has automatically solved updates.}} is displayed for a few seconds. The lines that have been changed are shortly shown against a bright green background.
+
+
+\subsection{Write conflicts}
+\label{subsec:writeconflict-implementierung}
+
+If the {\fontfamily{pcr}\selectfont ConflictDetector} finds out that the contents of competing lines are different, the conflict is a write conflict. Both revisions are passed on to the {\fontfamily{pcr}\selectfont showWriteConflictWarning} in the {\fontfamily{pcr}\selectfont ConflictPresenter}. This function displays the conflicting lines against a bright red background and shows a notification like the one that is displayed after an automatically succeeded replication:
+
+\lstset{language=html}
+\medskip 
+\begin{lstlisting}[caption=Notification of conflicting database state]
+<h3 style="display:none;" id="conflict-warning">Replication has caused one or more conflicts. <a href="/doingnotes/_design/doingnotes/index.html#/outlines/{{outline_id}}?solve=true">Solve them.</a></h3>
+\end{lstlisting}
+
+The notification contains a link to the current outline with the parameter {\fontfamily{pcr}\selectfont solve=true}. When an outline is loaded with this parameter, the {\fontfamily{pcr}\selectfont ConflictPresenter} is again invoked. The method {\fontfamily{pcr}\selectfont showConflicts} loads all conflicting lines with the aid of a CouchDB view. For every line both competing database revisions are requested. Afterwards, every conflicting line's text in the DOM is replaced by a partial, presenting the texts of both revisions so that the user may decide how to proceed. The text area is replaced by two forms, each of which contain the text of one revision. Every form contains a save button that triggers a PUT request to the route {\fontfamily{pcr}\selectfont\#/notes/solve/:id}. The route's callback function instructs the {\fontfamily{pcr}\selectfont ConflictResolver} to use the {\fontfamily{pcr}\selectfont solve\_conflict\_by\_deletion} function in order to create a new revision of the line that was chosen by the user, including any manual changes. This revision is saved and both old revisions are deleted.
+
+If several conflicts need resolving, saving one version of a line will hide both forms, replacing them by a normal line with a text area. When the final conflict is resolved, the site is reloaded without the {\fontfamily{pcr}\selectfont solve} parameter. Also, the monitoring for conflicts will be resumed after being temporarily suspended while resolving write conflicts.
+
+\subsection{Resolving hybrid conflict types}
+
+It is possible that a line's text is changed and a line is inserted after it at the same time. In this case, the append conflict will be resolved first, according to the process described above. Afterwards, the write conflict is artificially created again by CouchDB's {\fontfamily{pcr}\selectfont bulkSave} method. If a document is stored in this way, stating the {\fontfamily{pcr}\selectfont all\_or\_nothing:true} parameter, CouchDB will accept changes even if this causes the database state to be conflicted. In addition to reporting the resolved append conflict, a second notification will inform the user of write conflicts that need resolving.
